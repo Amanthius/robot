@@ -1821,7 +1821,7 @@ class Auboi5Robot:
         """
         self.check_event()
         if self.rshd >= 0 and self.connected:
-            return libpyauboi5.rs_project_stop(self.rshd)
+            return libpyauboi5.project_stop(self.rshd)
         else:
             logger.warn("RSHD uninitialized or not login!!!")
             return RobotErrorType.RobotError_NotLogin                                   
@@ -2794,11 +2794,11 @@ def test_process_demo():
 
     try:
 
-        # time.sleep(0.2)
-        # process_get_robot_current_status = GetRobotWaypointProcess()
-        # process_get_robot_current_status.daemon = True
-        # process_get_robot_current_status.start()
-        # time.sleep(0.2)
+        time.sleep(0.2)
+        process_get_robot_current_status = GetRobotWaypointProcess()
+        process_get_robot_current_status.daemon = True
+        process_get_robot_current_status.start()
+        time.sleep(0.2)
 
         queue = Queue()
 
@@ -2816,38 +2816,38 @@ def test_process_demo():
         if result != RobotErrorType.RobotError_SUCC:
             logger.info("connect server{0}:{1} failed.".format(ip, port))
         else:
-            # robot.project_startup()
-            # robot.enable_robot_event()
-            # robot.init_profile()
-            # joint_maxvelc = (2.596177, 2.596177, 2.596177, 3.110177, 3.110177, 3.110177)
-            # joint_maxacc = (17.308779/2.5, 17.308779/2.5, 17.308779/2.5, 17.308779/2.5, 17.308779/2.5, 17.308779/2.5)
-            # robot.set_joint_maxacc(joint_maxacc)
-            # robot.set_joint_maxvelc(joint_maxvelc)
-            # robot.set_arrival_ahead_blend(0.05)
-            # while True:
-            #     time.sleep(1)
+            robot.project_startup()
+            robot.enable_robot_event()
+            robot.init_profile()
+            joint_maxvelc = (1, 1, 1, 1, 1, 1)
+            joint_maxacc = (1.5, 1.5, 1.5, 1.5, 1.5, 1.5)
+            robot.set_joint_maxacc(joint_maxacc)
+            robot.set_joint_maxvelc(joint_maxvelc)
+            robot.set_arrival_ahead_blend(0.05)
+            while True:
+                time.sleep(1)
 
-            #     joint_radian = (0.541678, 0.225068, -0.948709, 0.397018, -1.570800, 0.541673)
-            #     robot.move_joint(joint_radian, True)
+                joint_radian = (0.541678, 0.225068, -0.948709, 0.397018, -1.570800, 0.541673)
+                robot.move_joint(joint_radian, True)
                 
 
-            #     joint_radian = (55.5/180.0*pi, -20.5/180.0*pi, -72.5/180.0*pi, 38.5/180.0*pi, -90.5/180.0*pi, 55.5/180.0*pi)
-            #     robot.move_joint(joint_radian, True)
+                joint_radian = (55.5/180.0*pi, -20.5/180.0*pi, -72.5/180.0*pi, 38.5/180.0*pi, -90.5/180.0*pi, 55.5/180.0*pi)
+                robot.move_joint(joint_radian, True)
 
-            #     joint_radian = (0, 0, 0, 0, 0, 0)
-            #     robot.move_joint(joint_radian, True)
+                joint_radian = (0, 0, 0, 0, 0, 0)
+                robot.move_joint(joint_radian, True)
 
-            #     print("-----------------------------")
+                print("-----------------------------")
 
-            #     queue.put(joint_radian)
+                queue.put(joint_radian)
 
-            #     robot.project_stop()
+                robot.project_stop()
 
-                # time.sleep(5)
+                time.sleep(5)
 
                 # process_get_robot_current_status.test()
 
-                # print("-----------------------------")
+                print("-----------------------------")
 
                 # 断开服务器链接
             print('到这里',robot.get_joint_status())
@@ -2871,8 +2871,65 @@ def test_process_demo():
         Auboi5Robot.uninitialize()
         print("run end-------------------------")
 
+def my_robot_task():
+    # 1. 初始化日志
+    logger_init()
+    logger.info("我的机器人程序开始运行...")
+
+    # 2. 系统初始化
+    Auboi5Robot.initialize()
+
+    # 3. 创建机器人“遥控器”
+    robot = Auboi5Robot()
+
+    try:
+        # 4. 创建上下文
+        handle = robot.create_context()
+
+        # 5. 连接机器人（改成你的IP）
+        ip = '192.168.1.40'
+        port = 8899
+        if robot.connect(ip, port) != RobotErrorType.RobotError_SUCC:
+            logger.error("连接机器人失败.")
+            return
+
+        # 6. 机器人上电
+        robot.robot_startup()
+
+        # 7. 初始化运动配置
+        robot.init_profile()
+        
+        # 8. 设置关节最大速度（举例）
+        robot.set_joint_maxvelc((1.5, 1.5, 1.5, 1.5, 1.5, 1.5))
+
+        # 9. *** 执行你的动作 ***
+        # 比如，移动到“零位”姿态
+        zero_joint_radian = (0, 0, 0, 0, 0, 0)
+        logger.info("准备移动到零位...")
+        robot.move_joint(zero_joint_radian)
+        logger.info("已到达零位。")
+
+        # 再比如，移动到另一个姿态
+        other_joint_radian = (0.5, 0.2, -0.9, 0.4, -1.5, 0.5)
+        logger.info("准备移动到指定位置...")
+        robot.move_joint(other_joint_radian)
+        logger.info("已到达指定位置。")
+
+    except RobotError as e:
+        logger.error("程序出错: {0}".format(e))
+
+    finally:
+        # 10. 确保程序结束时，机器人下电并断开连接
+        if robot.connected:
+            robot.robot_shutdown()
+            robot.disconnect()
+        
+        # 11. 释放库资源
+        Auboi5Robot.uninitialize()
+        logger.info("我的机器人程序已结束。")
 if __name__ == '__main__':
-    test_process_demo()
+    # test_process_demo()
+    my_robot_task()
     logger.info("test completed")
 
 
